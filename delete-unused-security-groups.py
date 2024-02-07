@@ -1,4 +1,5 @@
 import boto3
+import botocore
 
 client = boto3.client('ec2')
 
@@ -16,6 +17,12 @@ for security_group in security_groups:
     )['NetworkInterfaces']
 
     if len(references) == 0:
-        client.delete_security_group(GroupId=security_group['GroupId'])
-        print(f"Security Group {security_group['GroupId']}({security_group['GroupName']}) Deleted")
-
+        try:
+            client.delete_security_group(GroupId=security_group['GroupId'])
+            print(f"Security Group {security_group['GroupId']}({security_group['GroupName']}) DELETED")
+        except botocore.exceptions.ClientError as err:
+            error_code = err.response['Error']['Code']
+            if error_code == 'DependencyViolation':
+                print(f"Security Group {security_group['GroupId']}({security_group['GroupName']}) SKIPPED (Due to DependencyViolation)")
+            else:
+                raise err
